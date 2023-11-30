@@ -1,0 +1,38 @@
+﻿@using PagedList.Mvc
+@model PagedList.PagedList<MLCS.Data.Customer>
+@{
+    ViewBag.Title = "Index";
+    Layout = "~/Views/Shared/_MLCSLayout.cshtml";
+}
+
+<h2>Customer</h2>
+<a class="btn btn-info" href="@Url.Action("Create","Customer")">AddNew</a>
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Customer Name</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model)
+        {
+            <tr onclick="window.location = '@Url.Action("Edit", "Customer", new {id=item.Id})'">
+
+                <td>@item.Name</td>
+            </tr>
+        }
+    </tbody>
+</table>
+<div class="text-center">
+    @Html.PagedListPager(Model, page => Url.Action("Index", "Customer", new { page }), PagedListRenderOptions.EnableUnobtrusiveAjaxReplacing(
+    new PagedListRenderOptions()
+    {
+        DisplayLinkToFirstPage = PagedListDisplayMode.IfNeeded,
+        DisplayLinkToLastPage = PagedListDisplayMode.IfNeeded,
+        DisplayLinkToPreviousPage = PagedListDisplayMode.IfNeeded,
+        DisplayLinkToNextPage = PagedListDisplayMode.IfNeeded,
+        DisplayEllipsesWhenNotShowingAllPageNumbers = false
+
+    }
+    , new AjaxOptions() { HttpMethod = "Get", UpdateTargetId = "Customers", InsertionMode = InsertionMode.Replace }))
+</div>

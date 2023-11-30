@@ -1,0 +1,245 @@
+﻿@model MLCS.ViewModel.CustomerViewModel
+@{
+    ViewBag.Title = "Create";
+    Layout = "~/Views/Shared/_MLCSLayout.cshtml";
+}
+
+
+<h2>Create</h2>
+<form method="post">
+    @Html.HiddenFor(e => e.Customer.Id)
+    @Html.HiddenFor(e => e.Bill.Id)
+    @Html.HiddenFor(e => e.Bill.ProductBillId)
+    @Html.HiddenFor(e => e.ProductBill.CustomerId)
+    @Html.HiddenFor(e => e.ProductBill.Id)
+
+
+    @if (Model.Customer.Id == 0)
+    {
+        <button onclick="return Validation()" type="submit">Save</button>
+    }
+    else
+    {
+        <button type="submit" onclick="return Validation()" formaction="@Url.Action("Edit", "customer", new { id=Model.Customer.Id})">update</button>
+        <button type="submit" formaction="@Url.Action("Delete", "customer", new { id=Model.Customer.Id})">delete</button>
+    }
+    <a href="@Url.Action("Index","customer")" class="btn btn-info">Back</a>
+
+    <div class="form-group">
+        <label>Customer Name</label>
+        @Html.TextBoxFor(e => e.Customer.Name, new { @class = "form-control", @id = "NameId" })
+        <span></span>
+    </div>
+    <div class="form-group">
+        <label>Customer Mobile</label>
+        @Html.TextBoxFor(e => e.Customer.MobileNumber, new { @class = "form-control", @id = "MobilenNmberId" })
+        <span></span>
+    </div>
+
+    <div class="form-group">
+        <label>Address</label>
+        @Html.TextBoxFor(e => e.Customer.Address, new { @class = "form-control", @id = "AddressId" })
+        <span></span>
+    </div>
+    <hr />
+    <hr />
+    <div class="form-group">
+        <label>Customer Type</label>
+        @Html.DropDownListFor(e => e.ProductBill.BillType,
+      new List<SelectListItem>() { new SelectListItem() {Text="Custom", Value="1" },
+      new SelectListItem() {Text="Advance", Value="2" },
+      }
+        , new { @class = "form-control" })
+    </div>
+    <div class="form-group">
+        <label>Notes</label>
+        @Html.TextAreaFor(e => e.ProductBill.Note, new { @class = "form-control" })
+    </div>
+
+    <hr />
+    <input type="text" id="searchId" />
+    <input type="button" value="Search" id="btnSearch" />
+    @*<ul id="SearchResultId"></ul>*@
+    <div class="modal" id="searchModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Search Results</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body" id="SearchResultId">
+                    <!-- Display search results here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                    @*<button type="button" class="btn btn-primary" id="selectRecord">Select Record</button>*@
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="partialId">
+        @Html.Partial("~/Views/Customer/_ProductBillList.cshtml", Model)
+    </div>
+    <div>
+        <label>Discount</label>
+        @Html.TextBoxFor(e => e.Bill.discount, new { @class = "form-control", @id = "DiscountId" });
+        <label>Total Amount</label>
+        @Html.TextBoxFor(e => e.Bill.TotalAmount, new { @class = "form-control", @id = "TotalAmountId" });
+    </div>
+</form>
+@section scripts{
+
+    <script type="text/javascript">
+
+        $(document).ready(function () {
+            calculate(null);
+        })
+      
+        $("#btnSearch").click(function () {
+
+            let SearchText = $("#searchId").val();
+            if (SearchText.length >= 3) {
+                $.ajax({
+                    url: "@Url.Action("GetProduct", "Customer")",
+                    method: "Get",
+                    dataType: "json",
+                    data: {SearchText: SearchText },
+                    success: function (data) {
+                        var $searchResult = $("#SearchResultId");
+                        $searchResult.empty();
+                        if (data.length > 0) {
+                            data.forEach(function (result) {
+                                var $record = $("<div>").text("ID:" + result.Id + ", Name:" + result.ProductName)
+                                    .append("<input type='button' onclick='selectedRecord("+result.Id+")' id='selectRecord' value='select'/>");
+                                $searchResult.append($record);
+
+                            })
+                        }
+                        else {
+                            $searchResult.text("No Result Found");
+                        }
+                        $("#searchModal").modal("show");
+                      },
+                    error: function (error) {
+                            console.error("Error searching data:" + JSON.stringify(error));
+                        }
+                    })
+            }
+        })
+
+        let CustomerViewModel = {
+            ProductillDetailList: [],
+            ProductillDetails: {
+                Id: 0,
+                ProductBillId: 0,
+                Quentity: 0,
+                Total: 0,
+                ProductId: 0,
+               // ProductName: ""
+            }
+        }
+
+        function selectedRecord(id){
+            $("#searchModal").modal("hide");
+            $.ajax({
+                url: "@Url.Action("GetProductById","Customer")",
+                method: "Get",
+                dataType: "json",
+                data: { Id: id },
+                success: function (result) {
+                    AddIteam(result)
+                },
+                error(error) {
+                    console.error(error)
+                }
+            })
+        }
+
+        function AddIteam(result) {
+
+            CustomerViewModel.ProductillDetails = {
+                Id:0 ,
+                ProductBillId: 0,
+                Quentity: 0,
+                Total: 0,
+                ProductId: result.Id,
+                price: result.Price,
+                ProductName: result.ProductName
+            }
+            CustomerViewModel.ProductillDetailList = [];
+            $("table > tbody > tr").each(function (i) {
+                var Id = $("#ProductillDetailList_" + i + "__Id").val(); //$(this).find('td:eq(0)').text();
+                var ProductBillId = $("#ProductillDetailList_" + i + "__ProductBillId").val();// $(this).find("td:eq(1)").text();
+                var Quentity = $("#ProductillDetailList_" + i + "__Quentity").val();//$(this).find("td:eq(2)").text();
+                var Total = $("#ProductillDetailList_" + i + "__Total").val();//$(this).find("td:eq(3)").text();
+                var ProductId = $("#ProductillDetailList_" + i + "__ProductId").val();// $(this).find("td:eq(4)").text();
+                var ProductName = $("#ProductillDetailList_" + i + "__ProductName").val(); // $(this).find("td:eq(5)").text();
+                var price = $("#ProductillDetailList_" + i + "__price").val(); // $(this).find("td:eq(5)").text();
+
+                let ProductillDetails = {
+                    Id: Id,
+                    ProductBillId: ProductBillId,
+                    Quentity: Quentity,
+                    Total: Total,
+                    ProductId: ProductId,
+                    ProductName: ProductName,
+                    price: price
+                }
+                CustomerViewModel.ProductillDetailList.push(ProductillDetails);
+                ProductillDetails = null;
+            });
+
+            var DoublicateCheckPresentList = CustomerViewModel.ProductillDetailList.filter(e => e.ProductId == CustomerViewModel.ProductillDetails.ProductId);
+
+            if (DoublicateCheckPresentList<1) {
+                $.ajax({
+                    url: "@Url.Action("AddProductInBill", "Customer")",
+                    method: "Post",
+                    dataType: 'html',
+                    data: { customerModel: CustomerViewModel },
+                    success: function (result) {
+                        $("#tbl1").html('');
+                        $("#partialId").html(result);
+                    },
+                    error(error) {
+                        console.error(error)
+                    }
+                })
+            }
+            else {
+                alert("Alredy exist");
+            }
+        }
+        function Validation() {
+            var return_val = true;
+            var Name = $("#NameId").val();
+            var MobilenNmber = $("#MobilenNmberId").val();
+            var Address = $("#AddressId").val(); 
+            if (Name.trim() == "") {
+                $("#NameId").next('span').text('Name fied is required').show();
+                $("#NameId").focus();
+                return_val = false;
+            }
+            if (MobilenNmber.trim() == "")
+            {
+                $("#MobilenNmberId").next('span').text('Mobile Number fied is required').show();
+                $("#MobilenNmberId").focus();
+                return_val = false;
+            }
+
+            if (Address.trim() == "") {
+                $("#AddressId").next('span').text('Address fied is required').show();
+                $("#AddressId").focus();
+                return_val = false;
+            }
+            var tableLength = $("table > tbody > tr").length;
+            if (tableLength < 1) {
+                alert("add at list one Item in List");
+                return_val = false;
+            }
+            return return_val;
+        }
+    </script>
+}
